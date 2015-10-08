@@ -24,9 +24,6 @@ struct JobPack {
 };
 vector<int> job_que;
 vector<JobPack> job_finished;
-pthread_mutex_t lock_job_que;
-pthread_mutex_t lock_finish_que;
-pthread_cond_t new_job;
 int w=0, h=0;
 bool JobPublish = false;
 #define block_size 32.0
@@ -67,40 +64,14 @@ JobPack process(int frame)
     t.id = frame;
     return t;
 }
-void * worker(void * arg)
+void worker()
 {
-    
-    int frame = 0;
-    while (1) {
-        pthread_mutex_lock(&lock_job_que);
-        if (JobPublish && job_que.size() < 2)
-        {
-            pthread_mutex_unlock(&lock_job_que);
-            cout<<"Thread Exit\n";
-            pthread_exit(NULL);
-        }
-        while (job_que.size() < 2 && !JobPublish)
-        {
-            pthread_cond_wait(&new_job, &lock_job_que);
-        }
-        if (job_que.size() < 2)
-        {
-            pthread_mutex_unlock(&lock_job_que);
-            pthread_exit(NULL);
-        }
-        frame = job_que[1];
-        job_que.erase(job_que.begin()+1);
-        pthread_mutex_unlock(&lock_job_que);
-        
-        JobPack t = process(frame);
-
-        pthread_mutex_lock(&lock_finish_que);
+    for (int i = 1; i < job_que.size(); i++)
+    {
+        JobPack t = process(job_que[i]);
         job_finished.push_back(t);
-        pthread_mutex_unlock(&lock_finish_que);
-        
-        cout<<"finish"<<frame + 1<<endl;
+        cout<<"finish"<<job_que[i] + 1<<endl;
     }
-    pthread_exit(NULL);
 }
 int main(int argc, char* argv[])
 {
@@ -110,9 +81,6 @@ int main(int argc, char* argv[])
         cout<<"./sample ori.yuv enc.yuv w h\n";
         exit(1);
     }
-    pthread_mutex_init(&lock_job_que, NULL);
-    pthread_mutex_init(&lock_finish_que, NULL);
-    pthread_cond_init(&new_job, NULL);
     
     ori = fopen(argv[1], "rb");
     rec = fopen(argv[2], "rb");
@@ -123,13 +91,7 @@ int main(int argc, char* argv[])
         max_frame = atoi(argv[5]);
     int thread_num = 4;
 
-    vector<pthread_t *> thread_id;
-    for (int i = 0; i < thread_num; i++)
-    {
-        pthread_t *t = new pthread_t;
-        pthread_create(t, NULL, worker, NULL);
-        thread_id.push_back(t);
-    }
+
     int i=0;
     while (1)
     {
@@ -149,24 +111,12 @@ int main(int argc, char* argv[])
         }
         ori_yuv.push_back(t_ori);
         rec_yuv.push_back(t_rec);
-        pthread_mutex_lock(&lock_job_que);
         job_que.push_back(i++);
-        pthread_cond_signal(&new_job);
-        pthread_mutex_unlock(&lock_job_que);
         cout<<i<<endl;
         if (i == max_frame) break;
     }
-    JobPublish = true;
-    
-    for (int i = 0; i < thread_id.size(); i++)
-    {
-        pthread_join(*thread_id[i], NULL);
-    }
-    
-    sort(job_finished.begin(),job_finished.end());
-    
-    
-    
+
+    worker();
     
     for (int i = 0; i < MIN(ori_yuv.size(),rec_yuv.size());i++)
     {
@@ -200,6 +150,5 @@ int main(int argc, char* argv[])
             delete t;
     }
     job_finished.clear();
-    thread_id.clear();
     
 }
