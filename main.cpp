@@ -38,16 +38,7 @@ void * process(void * arg)
     int frame = 0;
     /*lock 1*/
     pthread_mutex_lock(&lock_job_que);
-//    if (JobPublish && job_que.size() < 2)
-//    {
-//        pthread_mutex_unlock(&lock_job_que);
-//        cout<<"Thread Exit\n";
-//        pthread_exit(NULL);
-//    }
-//    while (job_que.size() < 2 && !JobPublish)
-//    {
-//        pthread_cond_wait(&new_job, &lock_job_que);
-//    }
+
     if (job_que.size() < 2)
     {
         pthread_mutex_unlock(&lock_job_que);
@@ -114,12 +105,7 @@ int main(int argc, char* argv[])
     int thread_num = 4;
 
     vector<pthread_t *> thread_id;
-//    for (int i = 0; i < thread_num; i++)
-//    {
-//        pthread_t *t = new pthread_t;
-//        pthread_create(t, NULL, process, NULL);
-//        thread_id.push_back(t);
-//    }
+
     int i=0;
     while (1)
     {
@@ -141,7 +127,6 @@ int main(int argc, char* argv[])
         rec_yuv.push_back(t_rec);
         pthread_mutex_lock(&lock_job_que);
         job_que.push_back(i++);
-//        pthread_cond_signal(&new_job);
         pthread_mutex_unlock(&lock_job_que);
         cout<<i<<endl;
         pthread_t *t = new pthread_t;
