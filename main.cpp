@@ -91,7 +91,7 @@ void * process(void * arg)
 int main(int argc, char* argv[])
 {
     FILE *ori, *rec;
-    if(argc !=5)
+    if(argc < 5)
     {
         cout<<"./sample ori.yuv enc.yuv w h\n";
         exit(1);
@@ -104,6 +104,9 @@ int main(int argc, char* argv[])
     rec = fopen(argv[2], "rb");
     w = atoi(argv[3]);
     h = atoi(argv[4]);
+    int max_frame = -1;
+    if(argc == 6)
+        max_frame = atoi(argv[5]);
     int thread_num = 4;
 
     vector<pthread_t *> thread_id;
@@ -134,7 +137,7 @@ int main(int argc, char* argv[])
         pthread_t *t = new pthread_t;
         pthread_create(t, NULL, process, NULL);
         thread_id.push_back(t);
-        
+        if (i == max_frame) break;
     }
     JobPublish = true;
     for (int i = 0; i < thread_id.size(); i++)
@@ -156,17 +159,22 @@ int main(int argc, char* argv[])
     }
     ori_yuv.clear();
     rec_yuv.clear();
+    
+    VideoWriter wt("mask.mov",wt.fourcc('P', 'I', 'M', '1'),25,Size(w,h),false);
+
     for (int i = 0; i < job_finished.size();i++)
     {
-        imshow("test",*(job_finished[i].mask));
+        if (wt.isOpened()) wt<<*(job_finished[i].mask);
+//        imshow("test",*(job_finished[i].mask));
 //        char name[20];
 //        sprintf(name,"img%d.img",i);
 //        imwrite(name,*(job_finished[i].mask));
-        cvWaitKey(1);
+//        cvWaitKey(1);
     }
+    wt.release();
     for (int i = 0; i < job_finished.size();i++)
     {
-        Mat *t = (job_finished[i]).rgb_ori;
+        Mat *t = (job_finished[i]).mask;
         if (t)
             delete t;
         t = (job_finished[i]).mask;
