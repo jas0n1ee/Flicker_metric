@@ -72,6 +72,7 @@ void * process(void * arg)
                              tl.y+block_size>=h?h-1:tl.y+block_size));
             Scalar t = mean(diff(sq));
             if (t(0) < 10 ) {
+            //TODO : THIS THRESHOLD NEED TO ADJUST
                 for (int i = sq.tl().x; i <= sq.br().x; i++) {
                     for (int j = sq.tl().y; j <= sq.br().y; j++) {
                         int d = MAX(0, diff_rec.data[j*w+i] - diff.data[j*w+i]);
@@ -171,6 +172,9 @@ int main(int argc, char* argv[])
     for (int i = 0; i < job_finished.size();i++)
     {
         imshow("test",*(job_finished[i].mask));
+//        char name[20];
+//        sprintf(name,"img%d.img",i);
+//        imwrite(name,*(job_finished[i].mask));
         cvWaitKey(1);
     }
     for (int i = 0; i < job_finished.size();i++)
