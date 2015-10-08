@@ -74,6 +74,8 @@ void * process(void * arg)
         }
     }
     threshold(*mask,*mask,1,255,THRESH_BINARY);
+    //threshold(src, dst, threshold, max_value, THRESH_BINARY);
+    //TODO: THIS THRESHOLD NEED TO ADJUST
     JobPack t;
     cvtColor(*ori_yuv[frame], *rgb_ori, CV_YUV2BGR_I420);
     t.rgb_ori = rgb_ori;
