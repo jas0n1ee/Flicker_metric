@@ -1,0 +1,25 @@
+# vim: syntax=cmake
+IF(POLICY CMP0025)
+    CMAKE_POLICY(SET CMP0025 OLD) # report Apple's Clang as just Clang
+ENDIF()
+IF(POLICY CMP0042)
+    CMAKE_POLICY(SET CMP0042 NEW) # MACOSX_RPATH
+ENDIF()
+IF(CMAKE_GENERATOR STREQUAL "Xcode")
+    SET(XCODE 1)
+ENDIF()
+IF(${XCODE})
+	SET( SYS_LIB /usr/lib /usr/local/lib )
+ENDIF()
+
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+PROJECT( Flicker_metric )
+FIND_PACKAGE( OpenCV REQUIRED )
+INCLUDE_DIRECTORIES( ${OpenCV_INCLUDE_DIRS} /usr/local/include/node)
+IF(${UNIX})
+	SET( CMAKE_BUILD_TYPE Release )
+ENDIF()
+SET( main_SRCS main.cpp )
+LINK_DIRECTORIES( ${SYS_LIB} )
+ADD_EXECUTABLE(sample  ${main_SRCS} )
+TARGET_LINK_LIBRARIES( sample ${OpenCV_LIBS} )
