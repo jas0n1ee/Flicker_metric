@@ -31,34 +31,11 @@ int w=0, h=0;
 bool JobPublish = false;
 #define block_size 32.0
 Size block(block_size,block_size);
-
-void * process(void * arg)
+JobPack process(int frame)
 {
-    
-    int frame = 0;
-    /*lock 1*/
-    pthread_mutex_lock(&lock_job_que);
-//    if (JobPublish && job_que.size() < 2)
-//    {
-//        pthread_mutex_unlock(&lock_job_que);
-//        cout<<"Thread Exit\n";
-//        pthread_exit(NULL);
-//    }
-//    while (job_que.size() < 2 && !JobPublish)
-//    {
-//        pthread_cond_wait(&new_job, &lock_job_que);
-//    }
-    if (job_que.size() < 2)
-    {
-        pthread_mutex_unlock(&lock_job_que);
-        pthread_exit(NULL);
-    }
-    frame = job_que[1];
-    job_que.erase(job_que.begin()+1);
-    pthread_mutex_unlock(&lock_job_que);
-    
     Mat *rgb_ori = new Mat(h,w,CV_8UC3);
     Mat *mask = new Mat(h,w,CV_8UC1);
+    memset(mask->data,w*h,sizeof(uint));
     Mat y_ori((*ori_yuv[frame])(Rect(Point(0,0),Point(w,h))));
     Mat y_ori_p((*ori_yuv[frame-1])(Rect(Point(0,0),Point(w,h))));
     Mat y_rec((*rec_yuv[frame])(Rect(Point(0,0),Point(w,h))));
@@ -72,7 +49,7 @@ void * process(void * arg)
                              tl.y+block_size>=h?h-1:tl.y+block_size));
             Scalar t = mean(diff(sq));
             if (t(0) < 10 ) {
-            //TODO : THIS THRESHOLD NEED TO ADJUST
+                //TODO : THIS THRESHOLD NEED TO ADJUST
                 for (int i = sq.tl().x; i <= sq.br().x; i++) {
                     for (int j = sq.tl().y; j <= sq.br().y; j++) {
                         int d = MAX(0, diff_rec.data[j*w+i] - diff.data[j*w+i]);
@@ -88,11 +65,41 @@ void * process(void * arg)
     t.rgb_ori = rgb_ori;
     t.mask = mask;
     t.id = frame;
-    pthread_mutex_lock(&lock_finish_que);
-    job_finished.push_back(t);
-    pthread_mutex_unlock(&lock_finish_que);
+    return t;
+}
+void * worker(void * arg)
+{
     
-    cout<<"finish"<<frame + 1<<endl;
+    int frame = 0;
+    while (1) {
+        pthread_mutex_lock(&lock_job_que);
+        if (JobPublish && job_que.size() < 2)
+        {
+            pthread_mutex_unlock(&lock_job_que);
+            cout<<"Thread Exit\n";
+            pthread_exit(NULL);
+        }
+        while (job_que.size() < 2 && !JobPublish)
+        {
+            pthread_cond_wait(&new_job, &lock_job_que);
+        }
+        if (job_que.size() < 2)
+        {
+            pthread_mutex_unlock(&lock_job_que);
+            pthread_exit(NULL);
+        }
+        frame = job_que[1];
+        job_que.erase(job_que.begin()+1);
+        pthread_mutex_unlock(&lock_job_que);
+        
+        JobPack t = process(frame);
+
+        pthread_mutex_lock(&lock_finish_que);
+        job_finished.push_back(t);
+        pthread_mutex_unlock(&lock_finish_que);
+        
+        cout<<"finish"<<frame + 1<<endl;
+    }
     pthread_exit(NULL);
 }
 int main(int argc, char* argv[])
@@ -114,12 +121,12 @@ int main(int argc, char* argv[])
     int thread_num = 4;
 
     vector<pthread_t *> thread_id;
-//    for (int i = 0; i < thread_num; i++)
-//    {
-//        pthread_t *t = new pthread_t;
-//        pthread_create(t, NULL, process, NULL);
-//        thread_id.push_back(t);
-//    }
+    for (int i = 0; i < thread_num; i++)
+    {
+        pthread_t *t = new pthread_t;
+        pthread_create(t, NULL, worker, NULL);
+        thread_id.push_back(t);
+    }
     int i=0;
     while (1)
     {
@@ -141,15 +148,12 @@ int main(int argc, char* argv[])
         rec_yuv.push_back(t_rec);
         pthread_mutex_lock(&lock_job_que);
         job_que.push_back(i++);
-//        pthread_cond_signal(&new_job);
+        pthread_cond_signal(&new_job);
         pthread_mutex_unlock(&lock_job_que);
         cout<<i<<endl;
-        pthread_t *t = new pthread_t;
-        pthread_create(t, NULL, process, NULL);
-        thread_id.push_back(t);
-        
     }
     JobPublish = true;
+    
     for (int i = 0; i < thread_id.size(); i++)
     {
         pthread_join(*thread_id[i], NULL);
