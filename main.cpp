@@ -50,6 +50,7 @@ void * process(void * arg)
     
     Mat *rgb_ori = new Mat(h,w,CV_8UC3);
     Mat *mask = new Mat(h,w,CV_8UC1);
+    memset(mask->data,0,w*h*sizeof(uint8_t));
     Mat y_ori((*ori_yuv[frame])(Rect(Point(0,0),Point(w,h))));
     Mat y_ori_p((*ori_yuv[frame-1])(Rect(Point(0,0),Point(w,h))));
     Mat y_rec((*rec_yuv[frame])(Rect(Point(0,0),Point(w,h))));
@@ -174,7 +175,7 @@ int main(int argc, char* argv[])
     wt.release();
     for (int i = 0; i < job_finished.size();i++)
     {
-        Mat *t = (job_finished[i]).mask;
+        Mat *t = (job_finished[i]).rgb_ori;
         if (t)
             delete t;
         t = (job_finished[i]).mask;
