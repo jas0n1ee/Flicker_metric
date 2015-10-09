@@ -54,8 +54,8 @@ JobPack process(int frame)
                 for (int i = sq.tl().x; i <= sq.br().x; i++) {
                     for (int j = sq.tl().y; j <= sq.br().y; j++) {
                         int d = MAX(0, diff_rec.data[j*w+i] - diff.data[j*w+i]);
-//                        mask->data[j*w+i] = (d>0)?ori_rec.data[j*w+i]:0; //js proposed
-                        mask->data[j*w+i] = d;
+                        mask->data[j*w+i] = (d>0)?ori_rec.data[j*w+i]:0; //js proposed
+//                        mask->data[j*w+i] = d;
                         
                     }
                 }
@@ -80,6 +80,7 @@ void * worker(void * arg)
         {
             pthread_mutex_unlock(&lock_job_que);
             cout<<"Thread Exit\n";
+            pthread_cond_signal(&new_job);
             pthread_exit(NULL);
         }
         while (job_que.size() < 2 && !JobPublish)
@@ -89,6 +90,8 @@ void * worker(void * arg)
         if (job_que.size() < 2)
         {
             pthread_mutex_unlock(&lock_job_que);
+            cout<<"Thread Exit\n";
+            pthread_cond_signal(&new_job);
             pthread_exit(NULL);
         }
         frame = job_que[1];
