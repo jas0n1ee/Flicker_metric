@@ -34,14 +34,15 @@ Size block(block_size,block_size);
 JobPack process(int frame)
 {
     Mat *rgb_ori = new Mat(h,w,CV_8UC3);
-    Mat *mask = new Mat(h,w,CV_8UC1);
-    memset(mask->data,w*h,sizeof(uint));
+//    memset(mask->data,w*h,sizeof(uint));
     Mat y_ori((*ori_yuv[frame])(Rect(Point(0,0),Point(w,h))));
     Mat y_ori_p((*ori_yuv[frame-1])(Rect(Point(0,0),Point(w,h))));
     Mat y_rec((*rec_yuv[frame])(Rect(Point(0,0),Point(w,h))));
     Mat y_rec_p((*rec_yuv[frame-1])(Rect(Point(0,0),Point(w,h))));
     Mat diff = abs(y_ori - y_ori_p);
     Mat diff_rec = abs(y_rec - y_rec_p);
+    Mat ori_rec = abs(y_ori - y_rec);
+    Mat *mask = new Mat(h,w,CV_8UC1);
     for (int x = 0; x < ceil(w/block_size); x++) {
         for (int y = 0; y < ceil(h/block_size); y++) {
             Point tl(x*block_size,y*block_size);
@@ -53,13 +54,17 @@ JobPack process(int frame)
                 for (int i = sq.tl().x; i <= sq.br().x; i++) {
                     for (int j = sq.tl().y; j <= sq.br().y; j++) {
                         int d = MAX(0, diff_rec.data[j*w+i] - diff.data[j*w+i]);
+//                        mask->data[j*w+i] = (d>0)?ori_rec.data[j*w+i]:0; //js proposed
                         mask->data[j*w+i] = d;
+                        
                     }
                 }
             }
         }
     }
     threshold(*mask,*mask,1,255,THRESH_BINARY);
+    imshow("diffddd",*mask);
+    cvWaitKey(1);
     JobPack t;
     cvtColor(*ori_yuv[frame], *rgb_ori, CV_YUV2BGR_I420);
     t.rgb_ori = rgb_ori;
@@ -178,27 +183,27 @@ int main(int argc, char* argv[])
     ori_yuv.clear();
     rec_yuv.clear();
     
-    VideoWriter wt("mask.mov",wt.fourcc('P', 'I', 'M', '1'),25,Size(w,h),false);
+//    VideoWriter wt("mask.mov",wt.fourcc('P', 'I', 'M', '1'),25,Size(w,h),false);
 
     for (int i = 0; i < job_finished.size();i++)
     {
-        if (wt.isOpened()) wt<<*(job_finished[i].mask);
+//        if (wt.isOpened()) wt<<*(job_finished[i].mask);
 //        imshow("test",*(job_finished[i].mask));
 //        char name[20];
 //        sprintf(name,"img%d.img",i);
 //        imwrite(name,*(job_finished[i].mask));
 //        cvWaitKey(1);
     }
-    wt.release();
+//    wt.release();
     for (int i = 0; i < job_finished.size();i++)
     {
-        Mat *t = (job_finished[i]).mask;
+        Mat *t = (job_finished[i]).rgb_ori;
         if (t)
-            delete t;
+            t->release();
         t = (job_finished[i]).mask;
         if (t)
-            delete t;
-    }
+            t->release();
+        }
     job_finished.clear();
     thread_id.clear();
     
