@@ -34,7 +34,6 @@ Size block(block_size,block_size);
 JobPack process(int frame)
 {
     Mat *rgb_ori = new Mat(h,w,CV_8UC3);
-//    memset(mask->data,w*h,sizeof(uint));
     Mat y_ori((*ori_yuv[frame])(Rect(Point(0,0),Point(w,h))));
     Mat y_ori_p((*ori_yuv[frame-1])(Rect(Point(0,0),Point(w,h))));
     Mat y_rec((*rec_yuv[frame])(Rect(Point(0,0),Point(w,h))));
@@ -43,6 +42,7 @@ JobPack process(int frame)
     Mat diff_rec = abs(y_rec - y_rec_p);
     Mat ori_rec = abs(y_ori - y_rec);
     Mat *mask = new Mat(h,w,CV_8UC1);
+    memset(mask->data,0,w*h*sizeof(uint8_t));
     for (int x = 0; x < ceil(w/block_size); x++) {
         for (int y = 0; y < ceil(h/block_size); y++) {
             Point tl(x*block_size,y*block_size);
@@ -63,8 +63,6 @@ JobPack process(int frame)
         }
     }
     threshold(*mask,*mask,1,255,THRESH_BINARY);
-    imshow("diffddd",*mask);
-    cvWaitKey(1);
     JobPack t;
     cvtColor(*ori_yuv[frame], *rgb_ori, CV_YUV2BGR_I420);
     t.rgb_ori = rgb_ori;
@@ -188,11 +186,11 @@ int main(int argc, char* argv[])
     for (int i = 0; i < job_finished.size();i++)
     {
 //        if (wt.isOpened()) wt<<*(job_finished[i].mask);
-//        imshow("test",*(job_finished[i].mask));
+        imshow("test",*(job_finished[i].mask));
 //        char name[20];
 //        sprintf(name,"img%d.img",i);
 //        imwrite(name,*(job_finished[i].mask));
-//        cvWaitKey(1);
+        cvWaitKey(1);
     }
 //    wt.release();
     for (int i = 0; i < job_finished.size();i++)
