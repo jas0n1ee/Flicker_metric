@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
     vector<Mat *> rec_yuv;
     if(argc < 5)
     {
-        cout<<"./sample2 ori.yuv rec.yuv w h keyint\n";
+        cout<<"./sample2 ori.yuv rec.yuv w h keyint r_frame output.name\n";
         exit(1);
     }
     
@@ -35,6 +35,7 @@ int main(int argc, char* argv[])
     int w = atoi(argv[3]);
     int h = atoi(argv[4]);
     int keyint = atoi(argv[5]);
+    int r_frame = atoi(argv[6]);
     
     int ori_cnt=0, rec_cnt=0;
     while (1)
@@ -59,40 +60,40 @@ int main(int argc, char* argv[])
         rec_cnt++;
         rec_yuv.push_back(t);
     }
-    for(int keyframe = keyint; keyframe < ori_yuv.size(); keyframe += keyint)
+    int keyframe = r_frame;
+
+    display(ori_yuv[keyframe]);
+    for(int x = 0; x < floor(w/8.0); x++)
     {
-        display(ori_yuv[keyframe]);
-        for(int x = 0; x < floor(w/8.0); x++)
+        for(int y = 0; y < floor(h/8.0); y++)
         {
-            for(int y = 0; y < floor(h/8.0); y++)
+            int s_cnt = 0;
+            Rect block(Point(x*8,y*8),Point(MIN(x*8+8,w),MIN(y*8+8,h)));
+            Mat ref = (*ori_yuv[keyframe])(block);
+            for( int i = keyframe-keyint+1; i < keyframe; i++)
             {
-                int s_cnt = 0;
-                Rect block(Point(x*8,y*8),Point(MIN(x*8+8,w),MIN(y*8+8,h)));
-                Mat ref = (*ori_yuv[keyframe])(block);
-                for( int i = keyframe-keyint+1; i < keyframe; i++)
-                {
-                    Mat diff =abs((*ori_yuv[i])(block) - ref);
-                    Scalar t = mean(diff);
-                    if (t(0) > 20) { break; continue;}
-                    else if (t(0) < 5) s_cnt++;
+                Mat diff =abs((*ori_yuv[i])(block) - ref);
+                Scalar t = mean(diff);
+                if (t(0) > 20) { break; continue;}
+                else if (t(0) < 2) s_cnt++;
 //                    cout << t(0) <<endl;
-                }
-                if (s_cnt > keyint/3*2)
-                {
-                    //replace oriyuv
-                    for (int j = x*8; j < MIN(x*8+8,w); j++)
-                        for (int k = y*8; k < MIN(y*8+8,h); k++)
-                            ori_yuv[keyframe]->data[k*w + j] = rec_yuv[keyframe/keyint-1]->data[k*w + j];
-                    //TODO : maybe need to add U,V plane
+            }
+            if (s_cnt > keyint/3*2)
+            {
+                //replace oriyuv
+                for (int j = x*8; j < MIN(x*8+8,w); j++)
+                    for (int k = y*8; k < MIN(y*8+8,h); k++)
+                        ori_yuv[keyframe]->data[k*w + j] = rec_yuv[rec_yuv.size()-1]->data[k*w + j];
+                //TODO : maybe need to add U,V plane
 #ifndef nodisplay
-                    rectangle(*ori_yuv[keyframe],block, Scalar(255,255,255));
+                rectangle(*ori_yuv[keyframe],block, Scalar(255,255,255));
 #endif
-                }
             }
         }
-        display(ori_yuv[keyframe]);
     }
-    FILE *out=fopen(argv[6], "wb");
+    display(ori_yuv[keyframe]);
+
+    FILE *out=fopen(argv[7], "wb");
     for (int i = 0; i < ori_yuv.size(); i++)
     {
         Mat *t = ori_yuv[i];

@@ -10,46 +10,36 @@ h = int(sys.argv[3])
 keyint = int(sys.argv[4])
 name = sys.argv[1].split('.')[0]
 cnt = 0;
-ori_frame = [];
 with open(sys.argv[1],'rb') as f:
     while 1:
         frame = f.read(w*h*3/2)
         if len(frame) == 0: break
-        ori_frame.append(frame)
         cnt += 1
 print "Total Frame:" + cnt.__str__()
 
-temp_name = []
-for i in range(keyint,cnt,keyint):
-    temp_name.append(name + '_' + (i - keyint).__str__() + '_' + i.__str__() + '.yuv')
-    with open(name + '_' + (i - keyint).__str__() + '_' + i.__str__() + '.yuv','wb')as out:
-        out.write(ori_frame[i-keyint])
-        out.write(ori_frame[i])
 
-print temp_name
 if keyint == 30:
     bframe = 4
 for qp in [37, 42]:
-    rec_frame=[]
-    for clip in temp_name:
-        os.system('x265 --input %s --input-res %dx%d --qp %d --fps 2 --keyint %d -p medium --no-scenecut --b-adapt 0 --bframes %d -o %s_%d.h265'%( clip,\
-                              w, h,
-                              qp, keyint,
-                              bframe,
-                              clip.split('.')[0], qp))
-        os.system('ffmpeg -i %s_%d.h265 -vsync 0 -y %s_rec_%d.yuv'%(clip.split('.')[0],qp,\
-                                                                    clip.split('.')[0],qp))
-        with open('%s_rec_%d.yuv'%(clip.split('.')[0],qp),'rb') as f:
-            f.read(w*h*3/2)
-            frame = f.read(w*h*3/2)
-            rec_frame.append(frame)
-    with open('%s_qp%drec.yuv'%(name.split('_')[0],qp),'wb') as out:
-        for frame in rec_frame:
-            out.write(frame)
-    os.system('./unix_build/sample2 %s.yuv %s_qp%drec.yuv %d %d %d %s_qp%dout.yuv'%(name,\
-                                    name.split('_')[0],qp,w,h,keyint,name.split('_')[0],qp))
+    os.system('cp %s.yuv %s_rec.yuv'%(name,name))
+    for i in range(keyint,cnt,keyint):
+        ori_frame = [];
+        with open('%s_rec.yuv'%(name),'rb') as f:
+            while 1:
+                frame = f.read(w*h*3/2)
+                if len(frame) == 0: break
+                ori_frame.append(frame)
+        with open('%s_tem.yuv'%(name),'wb') as out:
+            out.write(ori_frame[i-keyint]);
+            out.write(ori_frame[i]);
+        os.system('x265 --input %s_tem.yuv --input-res %dx%d --qp %d --fps 2 -p medium --no-scenecut --b-adapt 0 --bframes 4 -o %s_tem.h265'%(name, w, h, qp, name))
+        os.system('ffmpeg -i %s_tem.h265 -vsync 0 -y %s_tem.yuv'%(name,name))
+        os.system('./unix_build/sample2 %s_rec.yuv %s_tem.yuv %d %d %d %d %s_rec.yuv'%(name,\
+                                name,w,h,keyint,i,name))
+    os.system('mv %s_rec.yuv %s_qp%d_rec.yuv'%(name,name,qp))
+    os.system('rm *tem.yuv')
+
 os.system('rm *h265')
-os.system('rm %s_*_*'%(name))
 
 
 
