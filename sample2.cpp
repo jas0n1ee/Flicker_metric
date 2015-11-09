@@ -75,7 +75,8 @@ int main(int argc, char* argv[])
                 Mat diff =abs((*ori_yuv[i])(block) - ref);
                 Scalar t = mean(diff);
                 if (t(0) > 20) { break; continue;}
-                else if (t(0) < 2) s_cnt++;
+                else if (t(0) < 2)
+                    s_cnt++;
 //                    cout << t(0) <<endl;
             }
             if (s_cnt > keyint/3*2)
@@ -84,6 +85,16 @@ int main(int argc, char* argv[])
                 for (int j = x*8; j < MIN(x*8+8,w); j++)
                     for (int k = y*8; k < MIN(y*8+8,h); k++)
                         ori_yuv[keyframe]->data[k*w + j] = rec_yuv[rec_yuv.size()-1]->data[k*w + j];
+                for (int j = x*4; j < MIN(x*4+4,w); j++)
+                {
+                    for (int k = y*4; k < MIN(y*4+4,h); k++)
+                    {
+                        ori_yuv[keyframe]->data[w*h + k*w + j] = \
+                        rec_yuv[rec_yuv.size()-1]->data[w*h + k*w + j];
+                        ori_yuv[keyframe]->data[w*h + w/2 + k*w + j] = \
+                        rec_yuv[rec_yuv.size()-1]->data[w*h + w/2 + k*w + j];
+                    }
+                }
                 //TODO : maybe need to add U,V plane
 #ifndef nodisplay
                 rectangle(*ori_yuv[keyframe],block, Scalar(255,255,255));
